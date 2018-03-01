@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Data;
 
+using NQuery;
+
 namespace Northwind
 {
     public class NorthwindDb
@@ -11,20 +13,25 @@ namespace Northwind
             var dataSet = new DataSet();
             dataSet.ReadXml(@"P:\fringe\northwind.xml");
 
-            var employeeTable = dataSet.Tables["Employees"];
+            var dataContext = new DataContext();
+            dataContext.AddTablesAndRelations(dataSet);
 
-            foreach (DataRow row in employeeTable.Rows)
+            var sql = @"
+                SELECT  FirstName + ' ' + LastName Name,
+                        Birthdate.AddYears(65) RetirementDate
+                FROM    Employees
+                WHERE   Birthdate.AddYears(65) < GETDATE()
+            ";
+
+            var query = new Query(sql, dataContext);
+            var resultsTable = query.ExecuteDataTable();
+
+            foreach (DataRow row in resultsTable.Rows)
             {
-                var firstName = Convert.ToString(row["FirstName"]);
-                var lastName = Convert.ToString(row["LastName"]);
-                var birthdate = Convert.ToDateTime(row["Birthdate"]);
-                var retirementDate = birthdate.AddYears(65);
+                var name = Convert.ToString(row["Name"]);
+                var retirementDate = Convert.ToDateTime(row["RetirementDate"]); ;
 
-                var isRetired = retirementDate < DateTime.Now;
-                if (!isRetired)
-                    continue;
-
-                result += $"{firstName} {lastName}: {retirementDate}\r\n";
+                result += $"{name}: {retirementDate}\r\n";
             }
 
             return result;
